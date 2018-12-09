@@ -1,4 +1,6 @@
-console.log('index.js');
+console.log('######### index.js');
 
 import './styles/main.css';
-import printText from './modules/print-text';
+import csvImporter from './modules/csv-importer';
+
+console.log('#########' + csvImporter);

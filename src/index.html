@@ -1,13 +1,68 @@
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Webpack</title>
+  <title>
+    <%= htmlWebpackPlugin.options.title %>
+  </title>
 </head>
+
 <body>
-  <div>
-    <span>Hello!</span>&nbsp;<span id="text-container"></span>
-  </div>
+
+  <header>
+    <div class="row">
+      <div class="col s6 offset-s3">
+        <div class="valign-wrapper">
+          <a href="#!" class="brand-logo">
+            <img id="m-logo" src="favicon.png" alt="logo">
+          </a>
+          <span>depa.tech</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="row">
+      <div class="col s8 offset-s2">
+
+        <div class="row">
+
+          <div class="col s6">
+            <h5>sevDesk API</h5>
+            <br>
+            <form id="formListArtifacts">
+              <div class="input-field col s12">
+                <input id="csv-file" type="text" value="depatech-schedule-201849.csv">
+                <label for="docIdListArtifacts">CSV-File</label>
+              </div>
+              <a id="send-request" class="submit input-field col s6 waves-effect waves-light btn">Send Request</a>
+            </form>
+          </div>
+
+          <div id="sevdesk-result" class="col s12">
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="page-footer">
+    <div class="container">
+      <div class="footer-copyright">
+        <div class="container center-align">
+          depa.tech is a service of&nbsp;<a href="https://mtc.berlin">Moving Targets Consulting GmbH</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
 </body>
+
 </html>

@@ -12,11 +12,14 @@ module.exports = {
     path: path.resolve(__dirname, 'build'),
     filename: '[name].js'
   },
+  node: {
+    fs: 'empty'
+  },
   module: {
     rules: [
       {
         test: /\.js$ /,
-        exclude: /(node_modules|bower_components)/,
+        exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
           options: {
@@ -24,24 +27,60 @@ module.exports = {
           }
         }
       },
+      // {
+      //   test: /\.css$/,
+      //   exclude: /node_modules/,
+      //   use: [
+      //     { loader: 'style-loader' },
+      //     {
+      //       loader: 'css-loader',
+      //       options: {
+      //         modules: true
+      //       }
+      //     },
+      //     { loader: 'sass-loader' }
+      //   ]
+      // },
       {
         test: /\.css$/,
+        loaders: ['style-loader', 'css-loader']
+      },
+      {
+        test: /\.(png|svg|jpg|gif|ico)$/,
         use: [
-          { loader: 'style-loader' },
           {
-            loader: 'css-loader',
+            loader: 'file-loader',
             options: {
-              modules: true
+              name: '[name].[ext]'
             }
-          },
-          { loader: 'sass-loader' }
+          }
+        ]
+      },
+      {
+        test: /\.(eot|svg|ttf|woff|woff2)$/,
+        use: [
+          {
+            loader: 'file-loader',
+            options: {
+              name: '[name].[ext]',
+              outputPath: 'fonts/'
+            }
+          }
         ]
       }
     ]
   },
+  devServer: {
+    contentBase: path.join(__dirname, 'build'),
+    compress: true,
+    port: 3001
+  },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './src/index.html'
+      filename: 'index.html',
+      favicon: './src/assets/favicon.ico',
+      template: './src/index.html',
+      title: 'sevDesk API'
     })
   ]
 };

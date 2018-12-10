@@ -1,6 +1,8 @@
-console.log('######### index.js');
-
+import './assets/favicon.png';
+import './styles/materialize.min.css';
+import './styles/material-font-icons.css';
 import './styles/main.css';
-import csvImporter from './modules/csv-importer';
+import './js/materialize.min.js';
 
-console.log('#########' + csvImporter);
+import csvImporter from './modules/csv-importer';
+csvImporter();

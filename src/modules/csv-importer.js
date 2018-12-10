@@ -1,19 +1,34 @@
-import csv from 'csv-parser';
-import * as fs from 'fs';
+const isProdMode = false;
 
-const module = (() => {
-  console.log('######### csv-importer.js');
-  let results = [];
-  fs.createReadStream('data.csv')
-    .pipe(csv())
-    .on('data', results.push)
-    .on('end', () => {
-      console.log(results);
-      // [
-      //   { NAME: 'Daffy Duck', AGE: 24 },
-      //   { NAME: 'Bugs Bunny', AGE: 22 }
-      // ]
-    });
-})();
+const CsvImporter = () => {
+  
+  document.querySelector('#send-request').addEventListener('click', (e) => {
+    e.preventDefault();
+    let fileName = document.querySelector('#csv-file').value;
+    console.log(fileName);
+    
+    const opt = {
+      headers: {
+        // 'method': 'get',
+        // 'Authorization': auth
+      }
+    };
+    const url = isProdMode ? '' : 'http://127.0.0.1:4000/csv/' + fileName;
+  
+    let request = new Request(url, opt);
+  
+    fetch(request)
+      .then(res => {
+        return res.json();
+      })
+      .then(data => {
+        document.querySelector('#sevdesk-result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+      })
+      .catch(errorThrown => {
+        console.log('ERROR: ' + errorThrown);
+      });
+  });
 
-export default module;
+};
+
+export default CsvImporter;

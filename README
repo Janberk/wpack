@@ -1,0 +1,10 @@
+INTRODUCTION
+------------
+
+Application requesting queries to sevDesk-API in order to create orders and invoices.
+
+ * For a full documentation of the API go to:
+   https://my.sevdesk.de/swaggerUI/index.html
+
+
+duplicate - copy orderNumber to header - get order positions by new order - change text

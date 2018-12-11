@@ -1,15 +1,18 @@
-var path = require('path');
-var express = require('express');
-var bodyParser = require('body-parser');
-var request = require('request');
-var cors = require('cors');
-var csv = require('csvtojson');
+const path = require('path');
+const express = require('express');
+const bodyParser = require('body-parser');
+const request = require('request');
+const cors = require('cors');
+const csv = require('csvtojson');
 
-var app = express();
-var api = 'https://my.sevdesk.de/api/v1/';
-var getOrders = 'Order?embed=contact%2Ctotal%2Ccontact.parent&countAll=true&limit=50&orderType=LI&emptyState=true&offset=0';
-var createContact = 'Contact';
-var formData = {
+const dotenv = require('dotenv');
+dotenv.config();
+
+
+const app = express();
+const getOrders = 'Order?embed=contact%2Ctotal%2Ccontact.parent&countAll=true&limit=50&orderType=LI&emptyState=true&offset=0';
+const createContact = 'Contact';
+const formData = {
   'name': 'Fake 4 GmbH',
   'customerNumber': '1005',
   'category[id]': '3',
@@ -27,14 +30,13 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/csv/:file', function (req, res) {
-  var fileName = path.resolve(__dirname, '../data/' + req.params.file);
+  const fileName = path.resolve(__dirname, '../data/' + req.params.file);
 
   csv()
     .fromFile(fileName)
     .then(function (json) {
-      // res.send(json);
 
-      var fData = {
+      const fData = {
         'orderNumber': 'DE - 1010',
         'contact[id]': '6659849',
         'contact[objectName]': 'Contact',
@@ -73,10 +75,10 @@ app.get('/csv/:file', function (req, res) {
       };
 
       request.post({
-        url: 'https://my.sevdesk.de/api/v1/Order?cft=55910358e71af5fd742c131e90cea095',
+        url: `${process.env.API_URI}` + 'Order?cft=55910358e71af5fd742c131e90cea095',
         form: fData,
         headers: {
-          
+          'Authorization': `${process.env.API_TOKEN}`,
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       }, (error, response, body) => {
@@ -116,6 +118,6 @@ app.get('/csv/:file', function (req, res) {
 //   });
 // });
 
-app.listen(4000, '127.0.0.1', function () {
-  console.log('Express server started. http://127.0.0.1:4000.');
+app.listen(`${process.env.PORT}`, `${process.env.HOST}`, function () {
+  console.log(`Express server started. http://${process.env.HOST}:${process.env.PORT}.`);
 });

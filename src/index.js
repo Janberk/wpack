@@ -3,6 +3,6 @@ import './styles/materialize.min.css';
 import './styles/material-font-icons.css';
 import './styles/main.css';
 import './js/materialize.min.js';
+import SevdeskClient from './modules/sevdesk-client';
 
-import csvImporter from './modules/csv-importer';
-csvImporter();
+const sevdeskClient = new SevdeskClient('depatech-schedule-201849.csv');

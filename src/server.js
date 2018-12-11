@@ -3,38 +3,61 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const cors = require('cors');
-const csv = require('csvtojson');
-
+const csvToJson = require('csvtojson');
 const dotenv = require('dotenv');
-dotenv.config();
-
 
 const app = express();
-const getOrders = 'Order?embed=contact%2Ctotal%2Ccontact.parent&countAll=true&limit=50&orderType=LI&emptyState=true&offset=0';
-const createContact = 'Contact';
-const formData = {
-  'name': 'Fake 4 GmbH',
-  'customerNumber': '1005',
-  'category[id]': '3',
-  'category[objectName]': 'Category'
-};
+dotenv.config();
 
-app.use(cors(), function (req, res, next) {
+// app.use(express.static('../build'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use(cors(), (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.header('Allow-Credentials', true);
   next();
 });
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.get('/getTags', (req, res) => {
 
-app.get('/csv/:file', function (req, res) {
-  const fileName = path.resolve(__dirname, '../data/' + req.params.file);
+  request.get({
+    url: `${process.env.API_URI}/Tag`,
+    headers: {
+      'Authorization': `${process.env.API_TOKEN}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }, (error, response, body) => {
+    if (error) {
+      return res.send(error);
+    }
+    return res.send(body);
+  });
+});
 
-  csv()
+app.get('/getTagRelations', (req, res) => {
+
+  request.get({
+    url: `${process.env.API_URI}/TagRelation`,
+    headers: {
+      'Authorization': `${process.env.API_TOKEN}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }, (error, response, body) => {
+    if (error) {
+      return res.send(error);
+    }
+    return res.send(body);
+  });
+});
+
+app.get('/createOrderLI/:file', (req, res) => {
+  const fileName = path.resolve(__dirname, `../data/${req.params.file}`);
+
+  csvToJson()
     .fromFile(fileName)
-    .then(function (json) {
+    .then(json => {
 
       const fData = {
         'orderNumber': 'DE - 1010',
@@ -75,7 +98,7 @@ app.get('/csv/:file', function (req, res) {
       };
 
       request.post({
-        url: `${process.env.API_URI}` + 'Order?cft=55910358e71af5fd742c131e90cea095',
+        url: `${process.env.API_URI}/Order`,
         form: fData,
         headers: {
           'Authorization': `${process.env.API_TOKEN}`,
@@ -118,6 +141,6 @@ app.get('/csv/:file', function (req, res) {
 //   });
 // });
 
-app.listen(`${process.env.PORT}`, `${process.env.HOST}`, function () {
+app.listen(`${process.env.PORT}`, `${process.env.HOST}`, () => {
   console.log(`Express server started. http://${process.env.HOST}:${process.env.PORT}.`);
 });

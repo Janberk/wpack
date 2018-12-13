@@ -1,3 +1,7 @@
+/**
+ * Configuration file used in frontend modules.
+ * 
+ */
 const config = {
   env: 'development',
   host: '127.0.0.1',

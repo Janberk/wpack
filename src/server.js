@@ -20,7 +20,7 @@ app.use(cors(), (req, res, next) => {
   next();
 });
 
-app.get('/getTags', (req, res) => {
+app.get('/Tag', (req, res) => {
 
   request.get({
     url: `${process.env.API_URI}/Tag`,
@@ -36,7 +36,7 @@ app.get('/getTags', (req, res) => {
   });
 });
 
-app.get('/getTagRelations', (req, res) => {
+app.get('/TagRelation', (req, res) => {
 
   request.get({
     url: `${process.env.API_URI}/TagRelation`,
@@ -52,7 +52,7 @@ app.get('/getTagRelations', (req, res) => {
   });
 });
 
-app.get('/createOrderLI/:file', (req, res) => {
+app.get('/Order/:file', (req, res) => {
   const fileName = path.resolve(__dirname, `../data/${req.params.file}`);
 
   csvToJson()

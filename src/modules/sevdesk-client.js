@@ -140,9 +140,6 @@ class SevdeskClient {
       });
     });
 
-    // promise.then((res) => {
-    // });
-
     return promise;
   }
 
@@ -165,30 +162,6 @@ class SevdeskClient {
   //     this._resultDiv.appendChild(spanName);
   //     this._resultDiv.appendChild(br);
   //   });
-  // }
-
-  // get tagMap() {
-  //   return this._tagMap;
-  // }
-
-  // set tagMap(tagMap) {
-  //   this._tagMap = tagMap;
-  // }
-
-  // get tagRelationMap() {
-  //   return this._tagRelationMap;
-  // }
-
-  // set tagRelationMap(tagRelationMap) {
-  //   this._tagRelationMap = tagRelationMap;
-  // }
-
-  // get contacts() {
-  //   return this._contacts;
-  // }
-
-  // set contacts(contact) {
-  //   this._contact = contact;
   // }
 
 }

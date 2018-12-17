@@ -9,13 +9,7 @@ import './styles/main.css';
 import './js/materialize.min.js';
 import SevdeskClient from './modules/sevdesk-client';
 
-
-const client = new SevdeskClient('depatech-schedule-201849.csv');
-const contactId = client.getContactIdByTagName('9874');
-
-contactId.then(value => {
-  client.showId(value);
-});
+const client = new SevdeskClient();
 
 
 

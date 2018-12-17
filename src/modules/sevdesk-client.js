@@ -23,6 +23,7 @@ class SevdeskClient {
     this._api = isProdMode ? config.api : `http://${config.host}:${config.port}`;
     this._contacts = [];
     this._csvTagNames = [];
+    this._data = [];
 
     this._loadInitialData();
     log.debug('constructor');
@@ -53,8 +54,8 @@ class SevdeskClient {
           });
         });
 
-        log.debug('tags:');
-        log.debug(tags);
+        // log.debug('tags:');
+        // log.debug(tags);
 
         return tags;
       })
@@ -75,14 +76,14 @@ class SevdeskClient {
               });
             });
 
-            log.debug('tagRelations:');
-            log.debug(tagRelations);
+            // log.debug('tagRelations:');
+            // log.debug(tagRelations);
 
             tagsAndRelations.push(tags);
             tagsAndRelations.push(tagRelations);
 
-            log.debug('tagsAndRelations:');
-            log.debug(tagsAndRelations);
+            // log.debug('tagsAndRelations:');
+            // log.debug(tagsAndRelations);
 
             return tagsAndRelations;
           })
@@ -97,8 +98,8 @@ class SevdeskClient {
               this._contacts.push(contact);
             });
 
-            log.debug('this._contacts:');
-            log.debug(this._contacts);
+            // log.debug('this._contacts:');
+            // log.debug(this._contacts);
           })
           .catch(error => {
             log.error(error);
@@ -108,7 +109,6 @@ class SevdeskClient {
 
   _processCsvData(e) {
     log.debug('_processCsvData:');
-    log.debug(this._contacts);
 
     let file = e.target.files[0],
         reader = new FileReader();
@@ -119,13 +119,14 @@ class SevdeskClient {
 
       for (let i = 1; i < allLines.length; i++) {
         let lineData = allLines[i].split(','),
-            tarr = [];
-
-        for (let j = 0; j < lineData.length; j++) {
-          tarr.push(lineData[j]);
-        }
-        let firstRow = tarr[0].split(' ');
-        this._csvTagNames.push(firstRow[1]);
+        tarr = [];
+        this._data.push(Object.assign({}, lineData));
+        
+        // for (let j = 0; j < lineData.length; j++) {
+        //   tarr.push(lineData[j]);
+        // }
+        // let firstRow = tarr[0].split(' ');
+        // this._csvTagNames.push(firstRow[1]);
       }
 
       let postData = {};
@@ -134,6 +135,7 @@ class SevdeskClient {
         postData[contact._id] = contact._tagName;
       }
       log.debug(postData);
+      log.debug(this._data);
 
       let options = {
         method: 'post',
@@ -141,7 +143,7 @@ class SevdeskClient {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(postData)
+        body: JSON.stringify(this._data)
       };
 
       let request = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
@@ -149,7 +151,7 @@ class SevdeskClient {
       fetch(request)
         .then(res => { return res.json(); })
         .then(json => {
-          log.debug(json);
+          // log.debug(json);
           this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
         log.debug('createOrderLI');
         })

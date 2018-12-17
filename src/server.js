@@ -53,8 +53,34 @@ app.get('/TagRelation', (req, res) => {
 });
 
 app.post('/Order', (req, res) => {
-  log.debug(req.body);
+  
+  for (const entry of req.body) {
+    log.debug(entry);
+  }
+
+
+
   return res.send(req.body);
+
+  const fData = {
+    'orderNumber': 'DE - 1010',
+    'contact[id]': '6659849',
+    'contact[objectName]': 'Contact',
+    'orderDate': '1544448937',
+    'status': '100',
+    'header': 'TEST Lieferschein DE - 1008',
+    'headText': '<p>Sehr geehrte Damen und Herren,</p> <p>vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen das gewünschte freibleibende Angebot:</p>',
+    'footText': '<p>Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung.<br> Wir bedanken uns sehr für Ihr Vertrauen.</p><p>Mit freundlichen Grüßen<br>[%KONTAKTPERSON%]</p>',
+    'version': 0,
+    'smallSettlement': false,
+    'contactPerson[id]': '248855',
+    'contactPerson[objectName]': 'SevUser',
+    'taxType': 'default',
+    'orderType': 'LI',
+    'address': 'Muster GmbH Musterstr. 1 11111 Berlin',
+    'currency': 'EUR',
+    'objectName': 'Order'
+  };
 
   /*
   request.post({

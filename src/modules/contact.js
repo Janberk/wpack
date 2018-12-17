@@ -7,6 +7,7 @@ class Contact {
     this._id = id;
     this._tagId = tagId;
     this._tagName = tagName;
+    this._data = {};
   }
 
   get id() {
@@ -19,6 +20,14 @@ class Contact {
 
   get tagName() {
     return this._tagName;
+  }
+
+  get data() {
+    return this._data;
+  }
+
+  set data(data) {
+    this._data = data;
   }
 
 }

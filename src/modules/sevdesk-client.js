@@ -22,8 +22,6 @@ class SevdeskClient {
     this._addListeners();
     this._api = isProdMode ? config.api : `http://${config.host}:${config.port}`;
     this._contacts = [];
-    this._csvTagNames = [];
-    this._data = [];
 
     this._loadInitialData();
     log.debug('constructor');
@@ -53,17 +51,12 @@ class SevdeskClient {
             tagName: item.name
           });
         });
-
-        // log.debug('tags:');
-        // log.debug(tags);
-
         return tags;
       })
       .then(tags => {
-
         request = isProdMode ? new Request(`${this._api}/TagRelation`, options) : new Request(`${this._api}/TagRelation`);
 
-        let tagsAndRelations = [];
+        let tagsAndRelations = {};
 
         fetch(request)
           .then(res => { return res.json(); })
@@ -75,31 +68,22 @@ class SevdeskClient {
                 relContactId: item.object.id
               });
             });
-
-            // log.debug('tagRelations:');
-            // log.debug(tagRelations);
-
-            tagsAndRelations.push(tags);
-            tagsAndRelations.push(tagRelations);
-
-            // log.debug('tagsAndRelations:');
-            // log.debug(tagsAndRelations);
-
+            tagsAndRelations['tags'] = tags;
+            tagsAndRelations['tagRelations'] = tagRelations;
             return tagsAndRelations;
           })
           .then(tagsAndRelations => {
+            let tags = tagsAndRelations['tags'];
+            let tagRelations = tagsAndRelations['tagRelations'];
 
-            let merged = _.map(tagsAndRelations[0], item => {
-              return _.assign(item, _.find(tagsAndRelations[1], ['tagId', item.tagId]));
+            let merged = _.map(tags, item => {
+              return _.assign(item, _.find(tagRelations, ['tagId', item.tagId]));
             });
 
             merged.forEach((item) => {
               let contact = new Contact(item.relContactId, item.tagId, item.tagName);
               this._contacts.push(contact);
             });
-
-            // log.debug('this._contacts:');
-            // log.debug(this._contacts);
           })
           .catch(error => {
             log.error(error);
@@ -108,34 +92,23 @@ class SevdeskClient {
   }
 
   _processCsvData(e) {
-    log.debug('_processCsvData:');
-
     let file = e.target.files[0],
         reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = () => {
       let csv = reader.result,
           allLines = csv.split(/\r\n|\n/);
 
       for (let i = 1; i < allLines.length; i++) {
         let lineData = allLines[i].split(','),
-        tarr = [];
-        this._data.push(Object.assign({}, lineData));
+            tagName = lineData[0].split(' ')[1];
         
-        // for (let j = 0; j < lineData.length; j++) {
-        //   tarr.push(lineData[j]);
-        // }
-        // let firstRow = tarr[0].split(' ');
-        // this._csvTagNames.push(firstRow[1]);
+        this._contacts.forEach((contact) => {
+          if (tagName === contact.tagName) {
+            contact.data = Object.assign({}, lineData);
+          }
+        });
       }
-
-      let postData = {};
-
-      for (const contact of this._contacts) {
-        postData[contact._id] = contact._tagName;
-      }
-      log.debug(postData);
-      log.debug(this._data);
 
       let options = {
         method: 'post',
@@ -143,7 +116,7 @@ class SevdeskClient {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(this._data)
+        body: JSON.stringify(this._contacts)
       };
 
       let request = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
@@ -151,15 +124,15 @@ class SevdeskClient {
       fetch(request)
         .then(res => { return res.json(); })
         .then(json => {
-          // log.debug(json);
           this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-        log.debug('createOrderLI');
         })
         .catch(error => {
           log.error(error);
         });
     };
     reader.readAsBinaryString(file);
+
+    log.debug('_processCsvData:');
   }
 
   /*

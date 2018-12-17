@@ -29,12 +29,14 @@ class SevdeskClient {
   
   _cacheDomElements() {
     this._createOrderLiBtn = document.querySelector('#create-order-li-btn');
+    this._selectCsvBtn = document.querySelector('input[type="file"]');
     this._resultDiv = document.querySelector('#api-result');
     console.log('LOG: _cacheDomElements');
   }
   
   _addListeners() {
     this._createOrderLiBtn.addEventListener('click', e => this.createOrderLI(e));
+    this._selectCsvBtn.addEventListener('change', e => this.selectFile(e));
     console.log('LOG: _addListeners');
   }
 
@@ -145,6 +147,55 @@ class SevdeskClient {
 
   showId(id) {
     console.log(id);
+  }
+
+  async selectFile(e) {
+    let file = e.target.files[0],
+        reader = new FileReader();
+
+    reader.onload = (e) => {
+      let csv = reader.result,
+          allTextLines = csv.split(/\r\n|\n/),
+          lines = [];
+      
+      for (let i = 1; i < allTextLines.length; i++) {
+        let data = allTextLines[i].split(','),
+            tarr = [];
+        
+        for (let j = 0; j < data.length; j++) {
+          tarr.push(data[j]);
+        }
+        lines.push(tarr);
+      }
+      console.log(lines[0][0].split(' '));
+    };
+    reader.readAsBinaryString(file);
+
+
+
+
+
+
+
+
+    
+    // let options = {
+    //   'method': 'post',
+    //   'form': new FormData()
+    // };
+
+    // let request = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
+
+    // try {
+    //   const response = await fetch(request);
+    //   // const json = await response;
+    //   console.log(response);
+      
+    //   // document.querySelector('#csv-result').innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+
+    // } catch (error) {
+    //   console.log('ERROR: ' + error);
+    // }
   }
 
   // appendTagData() {

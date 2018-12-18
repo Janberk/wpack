@@ -21,9 +21,6 @@ class SevdeskClient {
     this._cacheDomElements();
     this._addListeners();
     this._api = isProdMode ? config.api : `http://${config.host}:${config.port}`;
-    this._contacts = [];
-
-    this._loadInitialData();
     log.debug('constructor');
   }
 
@@ -38,101 +35,136 @@ class SevdeskClient {
     log.debug('_addListeners');
   }
 
-  _loadInitialData() {
-    let request = isProdMode ? new Request(`${this._api}/Tag`, options) : new Request(`${this._api}/Tag`);
+  _processCsvData(e) {
+    let requestTag;
+    let requestTagRelation;
 
-    fetch(request)
-      .then(res => { return res.json(); })
-      .then(json => {
-        let tags = [];
+    if (isProdMode) {
+      requestTag = new Request(`${this._api}/Tag`, options);
+      requestTagRelation = new Request(`${this._api}/TagRelation`, options);
+    } else {
+      requestTag = new Request(`${this._api}/Tag`);
+      requestTagRelation = new Request(`${this._api}/TagRelation`);
+    }      
+
+    const promise = fetch(requestTag).then(res => { return res.json(); }).then(json => {
+
+        let data = {
+          tags: [],
+          tagRelations: [],
+          contacts: []
+        };
+
         json.objects.forEach((item) => {
-          tags.push({
+          data.tags.push({
             tagId: item.id,
             tagName: item.name
           });
         });
-        return tags;
-      })
-      .then(tags => {
-        request = isProdMode ? new Request(`${this._api}/TagRelation`, options) : new Request(`${this._api}/TagRelation`);
+        return data;
 
-        let tagsAndRelations = {};
+      }).then(data => {
+        
+        fetch(requestTagRelation).then(res => { return res.json(); }).then(json => {
 
-        fetch(request)
-          .then(res => { return res.json(); })
-          .then(json => {
-            let tagRelations = [];
-            json.objects.forEach((item) => {
-              tagRelations.push({
-                tagId: item.tag.id,
-                relContactId: item.object.id
-              });
+          json.objects.forEach((item) => {
+            data.tagRelations.push({
+              tagId: item.tag.id,
+              relContactId: item.object.id
             });
-            tagsAndRelations['tags'] = tags;
-            tagsAndRelations['tagRelations'] = tagRelations;
-            return tagsAndRelations;
-          })
-          .then(tagsAndRelations => {
-            let tags = tagsAndRelations['tags'];
-            let tagRelations = tagsAndRelations['tagRelations'];
-
-            let merged = _.map(tags, item => {
-              return _.assign(item, _.find(tagRelations, ['tagId', item.tagId]));
-            });
-
-            merged.forEach((item) => {
-              let contact = new Contact(item.relContactId, item.tagId, item.tagName);
-              this._contacts.push(contact);
-            });
-          })
-          .catch(error => {
-            log.error(error);
           });
-      });
+
+          return data;
+
+        }).then(data => {
+
+          let merged = _.map(data.tags, item => {
+            return _.assign(item, _.find(data.tagRelations, ['tagId', item.tagId]));
+          });
+
+          merged.forEach((item) => {
+            let contact = new Contact(item.relContactId, item.tagId, item.tagName);
+            data.contacts.push(contact);
+          });
+
+          return data;
+        }).then(data => {
+          let file = e.target.files[0],
+              reader = new FileReader(),
+              contacts = data.contacts;
+
+          reader.onload = () => {
+            let csv = reader.result,
+                allLines = csv.split(/\r\n|\n/);
+
+            for (let i = 1; i < allLines.length; i++) {
+              let lineData = allLines[i].split(','),
+                  tagName = lineData[0].split(' ')[1];
+
+              contacts.forEach(contact => {
+                if (tagName === contact.tagName) {
+                  contact.data = Object.assign({}, lineData);
+                }
+              });
+            }
+
+            contacts.forEach(contact => {
+
+              this._fetchNextOrderNumber().then(nextOrderNumber => {
+
+                const params = {
+                  nextOrderNumber: nextOrderNumber,
+                  contact: contact.data[2],
+                  contactId: contact.id
+                };
+
+                let options = {
+                  method: 'post',
+                  headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(params)
+                };
+
+                let requestOrder = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
+
+                fetch(requestOrder).then(res => { return res.json(); }).then(json => {
+                  this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+                })
+                .catch(error => {
+                  log.error(error);
+                });
+              });
+
+            });
+
+          };
+          reader.readAsBinaryString(file);
+        })
+      })
+    .catch(error => {
+      log.error(error);
+    });
+    log.debug('_processCsvData:');
+    return promise;
   }
 
-  _processCsvData(e) {
-    let file = e.target.files[0],
-        reader = new FileReader();
+  _fetchNextOrderNumber() {
+    let requestGetNextOrderNumber;
 
-    reader.onload = () => {
-      let csv = reader.result,
-          allLines = csv.split(/\r\n|\n/);
+    if (isProdMode) {
+      requestGetNextOrderNumber = new Request(`${this._api}/Order/Factory/getNextOrderNumber?orderType=LI&useNextNumber=true`, options);
+    } else {
+      requestGetNextOrderNumber = new Request(`${this._api}/Order/Factory/getNextOrderNumber`);
+    }
 
-      for (let i = 1; i < allLines.length; i++) {
-        let lineData = allLines[i].split(','),
-            tagName = lineData[0].split(' ')[1];
-        
-        this._contacts.forEach((contact) => {
-          if (tagName === contact.tagName) {
-            contact.data = Object.assign({}, lineData);
-          }
-        });
-      }
-
-      let options = {
-        method: 'post',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(this._contacts)
-      };
-
-      let request = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
-
-      fetch(request)
-        .then(res => { return res.json(); })
-        .then(json => {
-          this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-        })
-        .catch(error => {
-          log.error(error);
-        });
-    };
-    reader.readAsBinaryString(file);
-
-    log.debug('_processCsvData:');
+    return fetch(requestGetNextOrderNumber).then(res => res.json()).then(data => { return data.objects; }).then(nextOrderNumber => {
+      return nextOrderNumber;
+    })
+    .catch(error => {
+      log.error(error);
+    });
   }
 
   /*

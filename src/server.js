@@ -20,6 +20,22 @@ app.use(cors(), (req, res, next) => {
   next();
 });
 
+app.get('/Contact', (req, res) => {
+
+  request.get({
+    url: `${process.env.API_URI}/Contact?depth=0&limit=50&offset=0&embed=addresses,tags`,
+    headers: {
+      'Authorization': `${process.env.API_TOKEN}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }, (error, response, body) => {
+    if (error) {
+      return res.send(error);
+    }
+    return res.send(body);
+  });
+});
+
 app.get('/Tag', (req, res) => {
 
   request.get({
@@ -93,7 +109,7 @@ function prepareFormData(req) {
   const nextOrderNumber = req.body.nextOrderNumber;
   const contact = req.body.contact;
   const contactId = req.body.contactId;
-  const address = `${contact}<br>Musterstr. 1<br>12345 Berlin`;
+  const address = req.body.address;
 
   const fData = {
     'orderNumber': nextOrderNumber,

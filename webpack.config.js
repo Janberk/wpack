@@ -80,7 +80,7 @@ module.exports = {
       filename: 'index.html',
       favicon: './src/assets/favicon.ico',
       template: './src/index.html',
-      title: 'sevDesk-Util'
+      title: 'Sevdesk-Api'
     })
   ]
 };

@@ -1,5 +1,5 @@
 {
-  "name": "sevdesk-util",
+  "name": "sevdesk-api",
   "version": "1.0.0",
   "description": "Application communicating with RESTful SevDesk-API.",
   "main": "index.js",
@@ -9,7 +9,7 @@
     "node-server": "node src/server.js",
     "start": "npm run build && npm run dev-server"
   },
-  "author": "Canberk Demirkan",
+  "author": "MTC",
   "license": "ISC",
   "devDependencies": {
     "@babel/core": "^7.2.0",

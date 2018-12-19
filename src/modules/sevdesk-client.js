@@ -1,14 +1,13 @@
 import * as log from 'loglevel';
 import { config } from './config';
-import Contact from './contact';
 import _ from 'lodash';
+import OrderFormUtil from './order-form-util';
 
 const isProdMode = config.env == 'production' ? true : false;
 const options = {
   headers: {
-    'Authorization': 'cdd9c3611f802f368eac2d10bc29dce9',
+    'Authorization': config.token,
     'Content-Type': 'application/x-www-form-urlencoded'
-    // 'credentials': 'same-origin'
   }
 };
 
@@ -53,36 +52,80 @@ class SevdeskClient {
           let lineData = allLines[i].split(','),
               tagName = lineData[0].split(' ')[1];
           map[tagName] = Object.assign({}, lineData);
-        }
-        
+        }        
 
         data.objects.forEach(contact => {
-          
+          log.debug(contact);
           this._fetchNextOrderNumber().then(nextOrderNumber => {
-            let data = map[contact.tags[0].name];
+            // let data = map[contact.tags[0].name];
 
-            const params = {
-              nextOrderNumber: nextOrderNumber,
-              contact: contact.name,
-              contactId: contact.id,
-              address: contact.addresses[0].street + ' ' + contact.addresses[0].zip + ' ' + contact.addresses[0].city
-            };
+            let orderReqOptions,
+                orderPosReqOptions,
+                orderFormUtil = new OrderFormUtil(),
+                orderFormData = orderFormUtil.getOrderData(nextOrderNumber, contact);
 
-            log.debug(params);
-  
-            let options = {
-              method: 'post',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(params)
-            };
-  
-            let requestOrder = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
-  
+            if (isProdMode) {
+              orderReqOptions = {
+                form: orderFormData,
+                headers: {
+                  'Authorization': config.token,
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                }                
+              };
+            } else {
+              orderReqOptions = {
+                method: 'post',
+                headers: {
+                  'Authorization': config.token,
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderFormData)
+              };      
+            }
+
+            const requestOrder = new Request(`${this._api}/Order`, orderReqOptions);
+            
             fetch(requestOrder).then(res => { return res.json(); }).then(json => {
               this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+              return json.objects.id;
+
+            }).then(orderId => {
+
+              let orderPosFormData = orderFormUtil.getOrderPosData(orderId);
+
+              if (isProdMode) {
+                orderPosReqOptions = {
+                  method: 'post',
+                  form: orderPosFormData,
+                  headers: {
+                    'Authorization': config.token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                  }
+                };
+
+              } else {
+                orderPosReqOptions = {
+                  method: 'post',
+                  headers: {
+                    'Authorization': config.token,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(orderPosFormData)
+                };
+              }
+              const requestOrderPos = new Request(`${this._api}/OrderPos`, orderPosReqOptions);
+
+              fetch(requestOrderPos).then(res => { return res.json(); }).then(json => {
+                this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+                return json.objects.id;
+              }).then(data => {
+                this._uploadResponse.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+              })
+              .catch(error => {
+                log.error(error);
+              });
             })
             .catch(error => {
               log.error(error);
@@ -127,258 +170,6 @@ class SevdeskClient {
       log.error(error);
     });
   }
-
-
-
-
-
-
-
-  /*
-  _processCsvData(e) {
-    let requestTag;
-    let requestTagRelation;
-
-    if (isProdMode) {
-      requestTag = new Request(`${this._api}/Tag`, options);
-      requestTagRelation = new Request(`${this._api}/TagRelation`, options);
-    } else {
-      requestTag = new Request(`${this._api}/Tag`);
-      requestTagRelation = new Request(`${this._api}/TagRelation`);
-    }      
-
-    const promise = fetch(requestTag).then(res => { return res.json(); }).then(json => {
-
-        let data = {
-          tags: [],
-          tagRelations: [],
-          contacts: []
-        };
-
-        json.objects.forEach((item) => {
-          data.tags.push({
-            tagId: item.id,
-            tagName: item.name
-          });
-        });
-        return data;
-
-      }).then(data => {
-        
-        fetch(requestTagRelation).then(res => { return res.json(); }).then(json => {
-
-          json.objects.forEach((item) => {
-            data.tagRelations.push({
-              tagId: item.tag.id,
-              relContactId: item.object.id
-            });
-          });
-
-          return data;
-
-        }).then(data => {
-
-          let merged = _.map(data.tags, item => {
-            return _.assign(item, _.find(data.tagRelations, ['tagId', item.tagId]));
-          });
-
-          merged.forEach((item) => {
-            let contact = new Contact(item.relContactId, item.tagId, item.tagName);
-            data.contacts.push(contact);
-          });
-
-          return data;
-        }).then(data => {
-          let file = e.target.files[0],
-              reader = new FileReader(),
-              contacts = data.contacts;
-
-          reader.onload = () => {
-            let csv = reader.result,
-                allLines = csv.split(/\r\n|\n/);
-
-            for (let i = 1; i < allLines.length; i++) {
-              let lineData = allLines[i].split(','),
-                  tagName = lineData[0].split(' ')[1];
-
-              contacts.forEach(contact => {
-                if (tagName === contact.tagName) {
-                  contact.data = Object.assign({}, lineData);
-                }
-              });
-            }
-
-            contacts.forEach(contact => {
-
-              this._fetchNextOrderNumber().then(nextOrderNumber => {
-
-                const params = {
-                  nextOrderNumber: nextOrderNumber,
-                  contact: contact.data[2],
-                  contactId: contact.id
-                };
-
-                let options = {
-                  method: 'post',
-                  headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(params)
-                };
-
-                let requestOrder = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order`, options);
-
-                fetch(requestOrder).then(res => { return res.json(); }).then(json => {
-                  this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-                })
-                .catch(error => {
-                  log.error(error);
-                });
-              });
-
-            });
-
-          };
-          reader.readAsBinaryString(file);
-        })
-      })
-    .catch(error => {
-      log.error(error);
-    });
-    log.debug('_processCsvData:');
-    return promise;
-  }
-
-  async _loadTags() {
-    let request = isProdMode ? new Request(`${this._api}/Tag`, options) : new Request(`${this._api}/Tag`);
-
-    try {
-      const response = await fetch(request);
-      const json = await response.json();
-
-      let tags = [];
-      json.objects.forEach((item, index) => {
-        tags.push({
-          tagId: item.id,
-          tagName: item.name
-        });
-      });
-
-      log.debug('_loadTags');
-      return Promise.resolve(tags);
-    } catch (error) {
-      log.error(error);
-    }
-  }
-
-  async _loadTagRelations() {
-    let request = isProdMode ? new Request(`${this._api}/TagRelation`, options) : new Request(`${this._api}/TagRelation`);
-
-    try {
-      const response = await fetch(request);
-      const json = await response.json();
-      
-      let tagRelations = [];
-      json.objects.forEach((item, index) => {
-        tagRelations.push({
-          tagId: item.tag.id,
-          relContactId: item.object.id
-        });
-      });
-
-      log.debug('_loadTagRelations');
-      return Promise.resolve(tagRelations);
-    } catch (error) {
-      log.error(error);
-    }
-  }
-
-  async _createContacts() {
-    try {
-      let tags = await this._loadTags()
-        .then(value => {
-          return value;
-        });
-
-      let tagRelations = await this._loadTagRelations()
-        .then(value => {
-          return value;
-        });
-
-      let contacts = [];
-  
-      let merged = _.map(tags, item => {
-        return _.assign(item, _.find(tagRelations, ['tagId', item.tagId]));
-      });
-
-      merged.forEach((item, index) => {
-        let contact = new Contact(item.relContactId, item.tagId, item.tagName);
-        contacts.push(contact);
-      });
-      
-      log.debug('_createContacts');
-      return Promise.resolve(contacts);
-    } catch (error) {
-      log.error(error);
-    }
-  }
-  
-  async createOrderLI(e) {
-    e.preventDefault();
-    
-    let request = isProdMode ? new Request(`${this._api}/Order`, options) : new Request(`${this._api}/Order/${this._file}`);
-    
-    try {
-      const response = await fetch(request);
-      const json = await response;
-      
-      this._resultDiv.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-      log.debug('createOrderLI');
-      
-    } catch (error) {
-      log.error(error);
-    }
-  }
-  
-  async getContactIdByTagName(tagName) {
-    try {      
-      let result = await this._createContacts()
-      .then(value => {
-        let contactIds = [];
-        
-        value.forEach((contact, index) => {
-          if (tagName === contact.tagName) {
-            contactIds.push(contact.id);
-          }
-        });
-        return contactIds;
-      });
-      
-      log.debug('getContactIdByTagName');
-      return Promise.resolve(result);
-    } catch (error) {
-      log.error(error);
-    }
-  }
-
-  appendTagData() {
-    this.tagMap.forEach((tag, key) => {
-      let id = document.createTextNode(`ID: ${tag.tagId}\xa0`),
-          name = document.createTextNode(`Name: ${tag.tagName}`),
-          br = document.createElement('br'),
-          spanId = document.createElement('span'),
-          spanName = document.createElement('span');
-
-      spanId.appendChild(id);
-      spanName.appendChild(name);
-
-      this._resultDiv.appendChild(spanId);
-      this._resultDiv.appendChild(spanName);
-      this._resultDiv.appendChild(br);
-    });
-  }
-  */
 
 }
 

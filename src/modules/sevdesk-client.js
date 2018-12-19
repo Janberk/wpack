@@ -20,6 +20,7 @@ class SevdeskClient {
     this._cacheDomElements();
     this._addListeners();
     this._api = isProdMode ? config.api : `http://${config.host}:${config.port}`;
+    this._orderFormUtil = new OrderFormUtil();
     log.debug('constructor');
   }
 
@@ -55,86 +56,102 @@ class SevdeskClient {
         }        
 
         data.objects.forEach(contact => {
-          log.debug(contact);
+
           this._fetchNextOrderNumber().then(nextOrderNumber => {
-            // let data = map[contact.tags[0].name];
-
-            let orderReqOptions,
-                orderPosReqOptions,
-                orderFormUtil = new OrderFormUtil(),
-                orderFormData = orderFormUtil.getOrderData(nextOrderNumber, contact);
-
-            if (isProdMode) {
-              orderReqOptions = {
-                form: orderFormData,
-                headers: {
-                  'Authorization': config.token,
-                  'Content-Type': 'application/x-www-form-urlencoded'
-                }                
-              };
-            } else {
-              orderReqOptions = {
-                method: 'post',
-                headers: {
-                  'Authorization': config.token,
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(orderFormData)
-              };      
-            }
-
-            const requestOrder = new Request(`${this._api}/Order`, orderReqOptions);
             
-            fetch(requestOrder).then(res => { return res.json(); }).then(json => {
-              this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-              return json.objects.id;
+            this._createOrderLI(nextOrderNumber, contact).then(orderId => {
+              
+              this._createOrderPos(orderId).then(orderId => {
 
-            }).then(orderId => {
+                this._uploadResponse.innerHTML = `<pre>${JSON.stringify(orderId, null, 2)}</pre>`;
 
-              let orderPosFormData = orderFormUtil.getOrderPosData(orderId);
-
-              if (isProdMode) {
-                orderPosReqOptions = {
-                  method: 'post',
-                  form: orderPosFormData,
-                  headers: {
-                    'Authorization': config.token,
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                  }
-                };
-
-              } else {
-                orderPosReqOptions = {
-                  method: 'post',
-                  headers: {
-                    'Authorization': config.token,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(orderPosFormData)
-                };
-              }
-              const requestOrderPos = new Request(`${this._api}/OrderPos`, orderPosReqOptions);
-
-              fetch(requestOrderPos).then(res => { return res.json(); }).then(json => {
-                this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
-                return json.objects.id;
-              }).then(data => {
-                this._uploadResponse.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-              })
-              .catch(error => {
-                log.error(error);
               });
-            })
-            .catch(error => {
-              log.error(error);
             });
           });
         });
+      })
+      .catch(error => {
+        log.error(error);
       });
     }
     reader.readAsBinaryString(file);
+
+    log.debug('_loadCsvData');
+  }
+
+  _createOrderLI(nextOrderNumber, contact) {
+    let orderReqOptions,
+        orderFormData = this._orderFormUtil.getOrderData(nextOrderNumber, contact);
+
+    if (isProdMode) {
+      orderReqOptions = {
+        form: orderFormData,
+        headers: {
+          'Authorization': config.token,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      };
+    } else {
+      orderReqOptions = {
+        method: 'post',
+        headers: {
+          'Authorization': config.token,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderFormData)
+      };
+    }
+
+    const requestOrder = new Request(`${this._api}/Order`, orderReqOptions);
+    
+    log.debug('_createOrderLI');
+
+    return fetch(requestOrder).then(res => { return res.json(); }).then(json => {
+      this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+      return json.objects.id;
+    })
+    .catch(error => {
+      log.error(error);
+    });
+  }
+
+  _createOrderPos(orderId) {
+    let orderPosReqOptions,
+        orderPosFormData = this._orderFormUtil.getOrderPosData(orderId);
+
+    if (isProdMode) {
+      orderPosReqOptions = {
+        method: 'post',
+        form: orderPosFormData,
+        headers: {
+          'Authorization': config.token,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      };
+
+    } else {
+      orderPosReqOptions = {
+        method: 'post',
+        headers: {
+          'Authorization': config.token,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderPosFormData)
+      };
+    }
+
+    const requestOrderPos = new Request(`${this._api}/OrderPos`, orderPosReqOptions);
+    
+    log.debug('_createOrderPos');
+
+    return fetch(requestOrderPos).then(res => { return res.json(); }).then(json => {
+      return json.objects.id;
+    })
+    .catch(error => {
+      log.error(error);
+    });
   }
 
   _fetchContacts() {
@@ -146,8 +163,10 @@ class SevdeskClient {
       requestContacts = new Request(`${this._api}/Contact`);
     }
 
+    log.debug('_fetchContacts');
+
     return fetch(requestContacts).then(res => res.json()).then(json => {
-      return json; // this._uploadResponse.innerHTML = `<pre>${JSON.stringify(json, null, 2)}</pre>`;
+      return json;
     })
     .catch(error => {
       log.error(error);
@@ -163,6 +182,8 @@ class SevdeskClient {
       requestGetNextOrderNumber = new Request(`${this._api}/Order/Factory/getNextOrderNumber`);
     }
 
+    log.debug('_fetchNextOrderNumber');
+
     return fetch(requestGetNextOrderNumber).then(res => res.json()).then(data => { return data.objects; }).then(nextOrderNumber => {
       return nextOrderNumber;
     })
@@ -170,7 +191,6 @@ class SevdeskClient {
       log.error(error);
     });
   }
-
 }
 
 export default SevdeskClient;
